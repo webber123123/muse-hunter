@@ -8,21 +8,24 @@ import threading
 from bs4 import BeautifulSoup
 
 from ui_controller import UIController
+from tools import Tools
 
 
-TESTING = {'print':True, 'quick_start':True}
+TESTING = {'print':True, 'exception':True}
 
 
 class MuseHunter(UIController):
     def __init__(self):
         super().__init__()
-        self.bind_event()
         self.MAX_QUEUE = 99
         self.url_queue = {}     # id : { 'url':'......', 'status':'down/ing/up/fail', 'name':'......', 'page':'...' }
         self.done_urls = []
+        self.tools = Tools()
+        self.bind_event()
     
     def bind_event(self):
         self.btn_add_url.clicked.connect(self.add_url)
+        self.btn_download_t1.clicked.connect(self.tools.thd_updtWbd)
     
     def add_url(self):
         new_url = self.ln_add_url.text()
@@ -68,7 +71,7 @@ t_widget.append(self.btn_rm_u{i})'''
         if TESTING['print']:
             print(new_url)
             print(self.url_queue)
-        
+    
     def del_url(self, id):
         exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
         exec('self.frm_url_%s.deleteLater()'%(id))
@@ -89,15 +92,28 @@ t_widget.append(self.btn_rm_u{i})'''
                     res = requests.get(self.url_queue[id]['url'])
                     soup = BeautifulSoup(res.content, 'html.parser')
                     title = soup.find("meta", property="og:title")["content"]
-                    _sub_str = 'pages_count&quot;:'
+                    _sub_str_2 = 'pages_count&quot;:'
+                    _sub_str = 'pages_count":'
                     _str_html = str(soup)
+                    
                     _index = _str_html.find(_sub_str)
                     page_count = str(soup)[_index+len(_sub_str):_index+len(_sub_str)+3].split(',')[0]
-                    if page_count == '\n<h': raise Exception
+                    
+                    if not page_count.isnumeric():
+                        _index = _str_html.find(_sub_str_2)
+                        page_count = str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3].split(',')[0]
+                    
+                    if TESTING['print']: print(_index, str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3])
+                    
+                    #https://musescore.com/user/12461571/scores/3291706
+                    
+                    if not page_count.isnumeric(): raise Exception
                     self.url_queue[id]['name'], self.url_queue[id]['pages'] = title, page_count
                     self.change_url_status('up', id, title)
                     if TESTING['print']: print(self.url_queue[id])
-                except: self.change_url_status('fail', id, 'Error : Sheet not found !')
+                except Exception as e:
+                    if TESTING['exception']: print(e)
+                    self.change_url_status('fail', id, 'Error : Sheet not found !')
         except: pass
     
     def change_url_status(self, status, id, title='none'):
@@ -136,8 +152,8 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     def update_tools(self):
         pass
     
-    def download_webdriver(self):
-        pass
-
-
     
+    
+
+
+

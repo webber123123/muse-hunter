@@ -4,11 +4,14 @@ import os, threading, subprocess, webdriver_manager
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 
+import common as cmn
+
 
 
 class Tools:
     def __init__(self):
-        self.driver_path = ''
+        self.tools_status = {'webdriver':False}
+        self.driver_path = self.get_driver_path()
         
     def thd_updtWbd(self):
         td_updtWbd = threading.Thread(target=self.update_webdriver)
@@ -17,10 +20,13 @@ class Tools:
     
     def check_webdriver(self):
         try:
-            driver = webdriver.Chrome()
-            driver.quit()
-        except: pass
-        pass
+            test_driver = webdriver.Chrome(executable_path=self.driver_path, chrome_options=cmn.chrome_options)
+            test_driver.quit()
+            print('exist')
+            return True
+        except Exception as e:
+            print(e)
+            return False
     
     def update_webdriver(self):
         try: self.driver_path = ChromeDriverManager(path = r".\\tools").install()

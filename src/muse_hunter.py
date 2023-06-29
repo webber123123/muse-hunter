@@ -1,20 +1,23 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from selenium import webdriver
 
-import requests
+import requests, threading, pathlib
 from time import sleep
-import threading
 
 from bs4 import BeautifulSoup
 
 from ui_controller import UIController
 from tools import Tools
+import common as cmn
 
 
-TESTING = {'print':True, 'exception':True}
+
 
 
 class MuseHunter(UIController):
+    sgnl_change_wd_sts = QtCore.pyqtSignal(str)
+    
     def __init__(self):
         super().__init__()
         self.MAX_QUEUE = 99
@@ -22,55 +25,40 @@ class MuseHunter(UIController):
         self.done_urls = []
         self.tools = Tools()
         self.bind_event()
+        self.bind_signal()
+        self.thd_initial_process()
     
     def bind_event(self):
         self.btn_add_url.clicked.connect(self.add_url)
-        self.btn_download_t1.clicked.connect(self.tools.thd_updtWbd)
+        self.btn_download_t0.clicked.connect(self.update_tool_0)
+        self.ln_add_url.returnPressed.connect(self.add_url_rtn_press)
+    
+    def bind_signal(self):
+        self.sgnl_change_wd_sts.connect(self.change_webdriver_status)
+        
+    
+    def thd_initial_process(self):
+        thd_init_prc = threading.Thread(target=self.initial_process)
+        thd_init_prc.start()
+        thd_init_prc.join
+    
+    def initial_process(self):
+        self.check_webdriver_available()
     
     def add_url(self):
         new_url = self.ln_add_url.text()
-        for i in range(self.MAX_QUEUE):
-            if i not in self.url_queue:
-                self.url_queue[i] = {'url':new_url, 'status':'down', 'name':'None', 'page':'None'}
-                t_widget = []
-                _translate = QtCore.QCoreApplication.translate
-                t_code = f'''self.frm_url_{i} = QtWidgets.QFrame(self.scrwc_urls)
-self.lbt_url_{i} = QtWidgets.QLabel(self.frm_url_{i})
-self.btn_rm_u{i} = QtWidgets.QPushButton(self.frm_url_{i})
-t_widget.append(self.frm_url_{i})
-t_widget.append(self.lbt_url_{i})
-t_widget.append(self.btn_rm_u{i})'''
-                exec(t_code)
-                t_widget[0].setMinimumSize(QtCore.QSize(0, 30))
-                t_widget[0].setMaximumSize(QtCore.QSize(16777215, 30))
-                t_widget[0].setStyleSheet("background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(100, 100, 100, 180), stop: 1.0 rgba(80, 80, 80, 130));"
-                "border-radius: 4px;")
-                t_widget[0].setFrameShape(QtWidgets.QFrame.StyledPanel)
-                t_widget[0].setFrameShadow(QtWidgets.QFrame.Raised)
-                t_widget[1].setGeometry(QtCore.QRect(10, 0, 441, 31))
-                font = QtGui.QFont()
-                font.setFamily("Microsoft YaHei UI")
-                font.setPointSize(12)
-                t_widget[1].setFont(font)
-                t_widget[1].setStyleSheet("color: rgb(255, 255, 255);"
-                "background-color: rgba(255, 255, 255, 0);")
-                t_widget[2].setGeometry(QtCore.QRect(450, 0, 31, 27))
-                font = QtGui.QFont()
-                font.setFamily("Microsoft YaHei")
-                font.setPointSize(14)
-                t_widget[2].setFont(font)
-                t_widget[2].setStyleSheet("background-color: rgba(255, 255, 255, 0);"
-                "border-radius: 12px;"
-                "color: rgba(255, 255, 255, 180);")
-                t_widget[1].setText(_translate("MainWindow", new_url))
-                t_widget[2].setText(_translate("MainWindow", "x"))
-                self.vlyo_urls.addWidget(t_widget[0])
-                t_widget[2].clicked.connect(lambda: self.del_url(i))
-                self.start_ckeck_url(i)
-                break
-        if TESTING['print']:
-            print(new_url)
-            print(self.url_queue)
+        if new_url != '':
+            for i in range(self.MAX_QUEUE):
+                if i not in self.url_queue:
+                    self.url_queue[i] = {'url':new_url, 'status':'down', 'name':'None', 'page':'None'}
+                    new_wg = self.add_frame_to_queue(i, new_url)
+                    new_wg[2].clicked.connect(lambda: self.del_url(i))
+                    self.ln_add_url.clear()
+                    self.start_ckeck_url(i)
+                    break
+            if cmn.TESTING['print']:
+                print(new_url)
+                print(self.url_queue)
     
     def del_url(self, id):
         exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
@@ -103,16 +91,16 @@ t_widget.append(self.btn_rm_u{i})'''
                         _index = _str_html.find(_sub_str_2)
                         page_count = str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3].split(',')[0]
                     
-                    if TESTING['print']: print(_index, str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3])
+                    if cmn.TESTING['print']: print(_index, str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3])
                     
                     #https://musescore.com/user/12461571/scores/3291706
                     
                     if not page_count.isnumeric(): raise Exception
                     self.url_queue[id]['name'], self.url_queue[id]['pages'] = title, page_count
                     self.change_url_status('up', id, title)
-                    if TESTING['print']: print(self.url_queue[id])
+                    if cmn.TESTING['print']: print(self.url_queue[id])
                 except Exception as e:
-                    if TESTING['exception']: print(e)
+                    if cmn.TESTING['exception']: print(e)
                     self.change_url_status('fail', id, 'Error : Sheet not found !')
         except: pass
     
@@ -146,14 +134,40 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     def exit_comfirm(self):
         pass
     
-    def check_tools_available(self):
+    def check_webdriver_available(self):
+        # webdriver
+        self.sgnl_change_wd_sts.emit('checking')
+        if self.tools.check_webdriver():
+            self.tools.tools_status['webdriver'] = True
+            self.sgnl_change_wd_sts.emit('up')
+        else:
+            self.tools.tools_status['webdriver'] = False
+            self.sgnl_change_wd_sts.emit('down')
+    
+    def update_tool_0(self):
+        self.sgnl_change_wd_sts.emit('downloading')
+        self.tools.thd_updtWbd()
+    
+    def add_url_rtn_press(self):
+        self.add_url()
+    
+    def change_webdriver_status(self, sts):
+        if sts == 'up': # up / need download / need update / downloading / checking
+            self.lbt_status_t0.setText('Available')
+            self.set_wg_style(self.lbt_status_t0, 'color: rgb(85, 255, 0);')
+        elif sts == 'checking':
+            self.lbt_status_t0.setText('Checking updates ...')
+            self.set_wg_style(self.lbt_status_t0, 'color: rgb(0, 255, 255);')
+        elif sts == 'down':
+            self.lbt_status_t0.setText('Need to update or download')
+            self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 170, 0);')
+        elif sts == 'downloading':
+            self.lbt_status_t0.setText('Downloading ...')
+            self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 255, 0);')
+        
+        
+        
+        
         pass
-    
-    def update_tools(self):
-        pass
-    
-    
-    
-
 
 

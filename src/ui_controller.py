@@ -14,6 +14,7 @@ class UIController(QMainWindow, Ui_MainWindow):
         # ui
         self.vlyo_urls.addStretch()
         self.vlyo_urls.setDirection(QBoxLayout.BottomToTop)
+        self.txtB_log.document().setMaximumBlockCount(40) 
     
     def add_frame_to_queue(self, i, new_url):
         t_widget = []
@@ -67,6 +68,7 @@ t_widget.append(self.btn_rm_u{i})'''
         except Exception as e: 
             if cmn.TESTING['exception']: print(e)
     
-    
+    def button_enable_switch(self, btn, sts):
+        btn.setEnabled(sts)
     
     

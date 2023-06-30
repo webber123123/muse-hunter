@@ -155,7 +155,7 @@ background-color: rgb(40, 40, 40);</string>
            <height>159</height>
           </rect>
          </property>
-         <widget class="QTextBrowser" name="txtB_complete_2">
+         <widget class="QTextBrowser" name="txtB_log">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -319,6 +319,9 @@ background-color: rgba(255, 255, 255, 0);</string>
         </property>
        </widget>
        <widget class="QPushButton" name="btn_start_download">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>210</x>
@@ -334,8 +337,17 @@ background-color: rgba(255, 255, 255, 0);</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: rgb(245, 245, 245);
-background-color: rgb(88, 88, 88);</string>
+         <string notr="true">QPushButton {
+	color: rgb(0, 255, 0);
+	background-color: rgb(88, 88, 88);
+}
+QPushButton:hover {
+	color: rgb(0, 220, 0);
+}
+
+QPushButton:disabled {
+	color: rgb(160, 160, 160);
+}</string>
         </property>
         <property name="text">
          <string>START</string>
@@ -456,7 +468,7 @@ background-color: rgb(88, 88, 88);</string>
 }</string>
              </property>
              <property name="text">
-              <string>Need to download</string>
+              <string>......</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -640,6 +652,9 @@ QPushButton:disabled {
                <family>Microsoft YaHei UI</family>
                <pointsize>12</pointsize>
               </font>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::NoFocus</enum>
              </property>
              <property name="styleSheet">
               <string notr="true">color: rgb(240, 240, 240);</string>

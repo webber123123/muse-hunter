@@ -69,17 +69,17 @@ class Ui_MainWindow(object):
         self.scrwc_log = QtWidgets.QWidget()
         self.scrwc_log.setGeometry(QtCore.QRect(0, 0, 299, 159))
         self.scrwc_log.setObjectName("scrwc_log")
-        self.txtB_complete_2 = QtWidgets.QTextBrowser(self.scrwc_log)
-        self.txtB_complete_2.setGeometry(QtCore.QRect(0, 0, 301, 161))
+        self.txtB_log = QtWidgets.QTextBrowser(self.scrwc_log)
+        self.txtB_log.setGeometry(QtCore.QRect(0, 0, 301, 161))
         font = QtGui.QFont()
         font.setFamily("Microsoft YaHei UI")
         font.setPointSize(12)
-        self.txtB_complete_2.setFont(font)
-        self.txtB_complete_2.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.txtB_complete_2.setStyleSheet("background-color: rgb(40, 40, 40);\n"
+        self.txtB_log.setFont(font)
+        self.txtB_log.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.txtB_log.setStyleSheet("background-color: rgb(40, 40, 40);\n"
 "color: rgb(220, 220, 220);\n"
 "width: 2px;")
-        self.txtB_complete_2.setObjectName("txtB_complete_2")
+        self.txtB_log.setObjectName("txtB_log")
         self.scrA_log.setWidget(self.scrwc_log)
         self.ln_add_url = QtWidgets.QLineEdit(self.frm_download)
         self.ln_add_url.setGeometry(QtCore.QRect(30, 230, 421, 31))
@@ -128,13 +128,23 @@ class Ui_MainWindow(object):
 "background-color: rgba(255, 255, 255, 0);")
         self.lbt_complete.setObjectName("lbt_complete")
         self.btn_start_download = QtWidgets.QPushButton(self.frm_download)
+        self.btn_start_download.setEnabled(False)
         self.btn_start_download.setGeometry(QtCore.QRect(210, 286, 141, 33))
         font = QtGui.QFont()
         font.setFamily("Microsoft YaHei UI")
         font.setPointSize(11)
         self.btn_start_download.setFont(font)
-        self.btn_start_download.setStyleSheet("color: rgb(245, 245, 245);\n"
-"background-color: rgb(88, 88, 88);")
+        self.btn_start_download.setStyleSheet("QPushButton {\n"
+"    color: rgb(0, 255, 0);\n"
+"    background-color: rgb(88, 88, 88);\n"
+"}\n"
+"QPushButton:hover {\n"
+"    color: rgb(0, 220, 0);\n"
+"}\n"
+"\n"
+"QPushButton:disabled {\n"
+"    color: rgb(160, 160, 160);\n"
+"}")
         self.btn_start_download.setObjectName("btn_start_download")
         self.tabwg_main.addTab(self.tab_download, "")
         self.tab_setting = QtWidgets.QWidget()
@@ -254,6 +264,7 @@ class Ui_MainWindow(object):
         font.setFamily("Microsoft YaHei UI")
         font.setPointSize(12)
         self.txtB_opt_i_o0.setFont(font)
+        self.txtB_opt_i_o0.setFocusPolicy(QtCore.Qt.NoFocus)
         self.txtB_opt_i_o0.setStyleSheet("color: rgb(240, 240, 240);")
         self.txtB_opt_i_o0.setObjectName("txtB_opt_i_o0")
         self.rdBtn_on_o1 = QtWidgets.QRadioButton(self.frm_setting)
@@ -313,7 +324,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.txtB_complete_2.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+        self.txtB_log.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'Microsoft YaHei UI\'; font-size:12pt; font-weight:400; font-style:normal;\">\n"
@@ -334,7 +345,7 @@ class Ui_MainWindow(object):
         self.btn_start_download.setText(_translate("MainWindow", "START"))
         self.tabwg_main.setTabText(self.tabwg_main.indexOf(self.tab_download), _translate("MainWindow", "Download"))
         self.lbt_tool_n_t0.setText(_translate("MainWindow", "Web driver (chrome)"))
-        self.lbt_status_t0.setText(_translate("MainWindow", "Need to download"))
+        self.lbt_status_t0.setText(_translate("MainWindow", "......"))
         self.rdBtn_ad_t0.setText(_translate("MainWindow", "Auto Download"))
         self.btn_download_t0.setText(_translate("MainWindow", "Download"))
         self.lbt_tool.setText(_translate("MainWindow", "Tools"))

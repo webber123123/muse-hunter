@@ -25,14 +25,16 @@ class Tools:
             if cmn.TESTING['exception']: print('in check_webdriver : '+str(e))
             return 'need updt'
     
-    def thd_updtWbd(self):
-        td_updtWbd = threading.Thread(target=self.update_webdriver)
+    def thd_updtWbd(self, func, param, func_ed):
+        td_updtWbd = threading.Thread(target=self.update_webdriver, args=(func, param, func_ed, ))
         td_updtWbd.start()
         td_updtWbd.join
     
-    def update_webdriver(self):
+    def update_webdriver(self, change_status, val, check_function):
+        change_status(val)
         try: self.driver_path = ChromeDriverManager(path = r".\\tools").install()
         except: pass
+        check_function()
     
     def get_driver_path(self):
         fTree = os.walk( '.\\tools\\.wdm\\drivers\\chromedriver\\win32', topdown=True )

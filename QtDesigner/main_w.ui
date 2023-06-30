@@ -485,6 +485,9 @@ background-color: rgb(88, 88, 88);</string>
             </widget>
            </widget>
            <widget class="QPushButton" name="btn_download_t0">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="geometry">
              <rect>
               <x>390</x>
@@ -510,7 +513,10 @@ background-color: rgb(88, 88, 88);</string>
 
 QPushButton:hover {
 	border-color: rgba(255, 255, 0, 190);
+}
 
+QPushButton:disabled {
+	color: rgb(120, 120, 120);
 }</string>
             </property>
             <property name="text">

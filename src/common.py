@@ -2,7 +2,9 @@ from selenium import webdriver
 import pathlib
 
 VERSION = '1.0.0'
-TESTING = {'print':True, 'exception':False}
+TESTING = {'print':True, 'exception':True}
+
+app_alive = True
 
 
 path_cr = str(pathlib.Path().absolute()) + '\\'

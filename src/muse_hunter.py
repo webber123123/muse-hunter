@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from selenium import webdriver
 
-import requests, threading, pathlib
+import requests, threading, pathlib, pyperclip
 from time import sleep
 
 from bs4 import BeautifulSoup
@@ -20,22 +20,27 @@ class MuseHunter(UIController):
     
     def __init__(self):
         super().__init__()
+        # init val
+        self.tools = Tools()
         self.MAX_QUEUE = 99
         self.url_queue = {}     # id : { 'url':'......', 'status':'down/ing/up/fail', 'name':'......', 'page':'...' }
         self.done_urls = []
-        self.tools = Tools()
+        self.timer_freq = {'auto_url':1000}
+        # init action
         self.bind_event()
         self.bind_signal()
         self.thd_initial_process()
+        self.auto_url_listener.start(self.timer_freq['auto_url'])
     
     def bind_event(self):
         self.btn_add_url.clicked.connect(self.add_url)
         self.btn_download_t0.clicked.connect(self.update_tool_0)
         self.ln_add_url.returnPressed.connect(self.add_url_rtn_press)
+        # timer
+        self.auto_url_listener.timeout.connect(self.auto_add_url)
     
     def bind_signal(self):
         self.sgnl_change_wd_sts.connect(self.change_webdriver_status)
-        
     
     def thd_initial_process(self):
         thd_init_prc = threading.Thread(target=self.initial_process)
@@ -45,8 +50,8 @@ class MuseHunter(UIController):
     def initial_process(self):
         self.check_webdriver_available()
     
-    def add_url(self):
-        new_url = self.ln_add_url.text()
+    def add_url(self, new_url=''):
+        if new_url == '': new_url = self.ln_add_url.text()
         if new_url != '':
             for i in range(self.MAX_QUEUE):
                 if i not in self.url_queue:
@@ -87,7 +92,7 @@ class MuseHunter(UIController):
                     _index = _str_html.find(_sub_str)
                     page_count = str(soup)[_index+len(_sub_str):_index+len(_sub_str)+3].split(',')[0]
                     
-                    if not page_count.isnumeric():
+                    if not page_count.isnumeric() or title == '':
                         _index = _str_html.find(_sub_str_2)
                         page_count = str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3].split(',')[0]
                     
@@ -137,16 +142,23 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     def check_webdriver_available(self):
         # webdriver
         self.sgnl_change_wd_sts.emit('checking')
-        if self.tools.check_webdriver():
+        rst = self.tools.check_webdriver()
+        if rst == 'has':
             self.tools.tools_status['webdriver'] = True
             self.sgnl_change_wd_sts.emit('up')
-        else:
+        elif rst == 'need dl':
             self.tools.tools_status['webdriver'] = False
-            self.sgnl_change_wd_sts.emit('down')
+            self.btn_download_t0.setEnabled(True)
+            self.sgnl_change_wd_sts.emit('need dl')
+        elif rst == 'need updt':
+            self.tools.tools_status['webdriver'] = False
+            self.btn_download_t0.setEnabled(True)
+        self.sgnl_change_wd_sts.emit(rst)
     
     def update_tool_0(self):
         self.sgnl_change_wd_sts.emit('downloading')
         self.tools.thd_updtWbd()
+        self.check_webdriver_available()
     
     def add_url_rtn_press(self):
         self.add_url()
@@ -158,16 +170,20 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         elif sts == 'checking':
             self.lbt_status_t0.setText('Checking updates ...')
             self.set_wg_style(self.lbt_status_t0, 'color: rgb(0, 255, 255);')
-        elif sts == 'down':
-            self.lbt_status_t0.setText('Need to update or download')
+        elif sts == 'need dl':
+            self.lbt_status_t0.setText('Need to download')
+            self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 10, 0);')
+        elif sts == 'need updt':
+            self.lbt_status_t0.setText('Need to update')
             self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 170, 0);')
         elif sts == 'downloading':
             self.lbt_status_t0.setText('Downloading ...')
             self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 255, 0);')
+    
+    def auto_add_url(self):
+        clipboard_content = pyperclip.paste()
+        if 'https://musescore.com/' in clipboard_content:
+            self.add_url(clipboard_content)
+            pyperclip.copy('')
+        self.auto_url_listener.start(self.timer_freq['auto_url'])
         
-        
-        
-        
-        pass
-
-

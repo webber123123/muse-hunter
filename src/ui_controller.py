@@ -9,6 +9,9 @@ class UIController(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        # init
+        self.auto_url_listener = QtCore.QTimer()
+        # ui
         self.vlyo_urls.addStretch()
         self.vlyo_urls.setDirection(QBoxLayout.BottomToTop)
     

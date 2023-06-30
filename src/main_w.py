@@ -189,6 +189,7 @@ class Ui_MainWindow(object):
         self.rdBtn_ad_t0.setStyleSheet("color: rgb(255, 255, 255);")
         self.rdBtn_ad_t0.setObjectName("rdBtn_ad_t0")
         self.btn_download_t0 = QtWidgets.QPushButton(self.frm_setting)
+        self.btn_download_t0.setEnabled(False)
         self.btn_download_t0.setGeometry(QtCore.QRect(390, 110, 111, 51))
         font = QtGui.QFont()
         font.setFamily("Microsoft YaHei UI")
@@ -204,7 +205,10 @@ class Ui_MainWindow(object):
 "\n"
 "QPushButton:hover {\n"
 "    border-color: rgba(255, 255, 0, 190);\n"
+"}\n"
 "\n"
+"QPushButton:disabled {\n"
+"    color: rgb(120, 120, 120);\n"
 "}")
         self.btn_download_t0.setObjectName("btn_download_t0")
         self.line_tool = QtWidgets.QFrame(self.frm_setting)

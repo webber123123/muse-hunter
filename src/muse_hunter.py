@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from PIL import Image
 from PyPDF2 import PdfFileMerger
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
@@ -87,6 +88,8 @@ class MuseHunter(UIController):
         exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
         exec('self.frm_url_%s.deleteLater()'%(id))
         self.scrwc_urls.repaint()
+        print('sadasdad : ')
+        print(self.url_queue)
         del self.url_queue[id]
         self.check_download_available()
         self.sgnl_updt_log.emit('URL deleted\n', 'suc')
@@ -215,10 +218,10 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         t_queue = self.url_queue.copy()
         for sheet in t_queue:
             if 'musescore' in t_queue[sheet]['url']:
-                if self.get_sheet_musescore(t_queue[sheet]):
-                    if self.combine_svg_to_pdf(t_queue[sheet]):
-                        self.ending_combine(self)
-                        del self.url_queue[sheet]
+                rtn = self.get_sheet_musescore(t_queue[sheet])
+                if rtn[0]:
+                    if self.combine_pages_to_pdf(t_queue[sheet], rtn[1]):
+                        self.ending_combine(t_queue[sheet])
                         self.del_url(sheet)
                         self.add_complete_url(t_queue[sheet]['name'])
                         self.sgnl_updt_log.emit('sheet get !\n', 'suc')
@@ -226,17 +229,19 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     def get_sheet_musescore(self, sheet_i):
         self.sgnl_updt_log.emit('launching webdriver\n', 'ing')
         try: hunter = webdriver.Chrome(executable_path=self.tools.driver_path, chrome_options=cmn.chrome_options)
-        except: return self.exception_handler('no_tool_0_up')
+        except: return [self.exception_handler('no_tool_0_up')]
         
         self.sgnl_updt_log.emit('connecting to website\n', 'ing')
         try: hunter.get(sheet_i['url'])
-        except: return self.exception_handler('no_conn')
+        except: return [self.exception_handler('no_conn')]
         
         scrl_length = 400
         js="var q=document.getElementById('jmuse-scroller-component').scrollTop=" + str(scrl_length)
         hunter.execute_script(js)
         
-        self.sgnl_updt_log.emit('downloading sheet\'s .svg file\n', 'ing')
+        file_type = ''
+        self.new_workspace()
+        self.sgnl_updt_log.emit('downloading sheet pages\n', 'ing')
         for page in range(1, sheet_i['pages']+1):
             sh_xpath = '//*[@id="jmuse-scroller-component"]/div['+str(page)+']/img'
             while 1:
@@ -247,34 +252,48 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
                     scrl_length += 200
                     js="var q=document.getElementById('jmuse-scroller-component').scrollTop=" + str(scrl_length)
                     hunter.execute_script(js)
-                    if scrl_length > 1200*page: return self.exception_handler('page_missing')
+                    if scrl_length > 1200*page: return [self.exception_handler('page_missing')]
             try:
                 sc_src = hunter.find_element('xpath', sh_xpath).get_attribute('src')
+                if page == 1:
+                    if 'score_1.svg' in sc_src: file_type = '.svg'
+                    else: file_type = '.png'
                 if cmn.TESTING['print']: print(sc_src)
                 res = requests.get(sc_src)
-                with open('workspace\\'+str(page)+'.svg' ,'wb') as f:
+                with open('workspace\\'+str(page)+file_type ,'wb') as f:
                     f.write(res.content)
-            except: return self.exception_handler('dl_fail')
+            except: return [self.exception_handler('dl_fail')]
             scrl_length += 1000
             js="var q=document.getElementById('jmuse-scroller-component').scrollTop=" + str(scrl_length)
             hunter.execute_script(js)
             time.sleep(1)
         hunter.quit()
-        return True
+        return [True, file_type]
     
-    def combine_svg_to_pdf(self, sheet_i):
-        self.sgnl_updt_log.emit('combining svg files to pdf\n', 'ing')
+    def combine_pages_to_pdf(self, sheet_i, file_type):
+        self.sgnl_updt_log.emit('combining pages to pdf\n', 'ing')
         merger = PdfFileMerger()
         try:
-            for img_n in range(1, sheet_i['pages']+1):
-                images = svg2rlg('workspace\\'+str(img_n)+'.svg')
-                renderPDF.drawToFile(images, 'workspace\\'+str(img_n)+'.pdf')
-            time.sleep(1)
-            for pdf_n in range(1, sheet_i['pages']+1):
-                merger.append('workspace\\'+str(pdf_n)+'.pdf')
-                time.sleep(0.5)
-            merger.write('complete\\score.pdf')
-            merger.close()
+            if file_type == '.svg':
+                for img_n in range(1, sheet_i['pages']+1):
+                    images = svg2rlg('workspace\\'+str(img_n)+'.svg')
+                    renderPDF.drawToFile(images, 'workspace\\'+str(img_n)+'.pdf')
+                time.sleep(1)
+                for pdf_n in range(1, sheet_i['pages']+1):
+                    merger.append('workspace\\'+str(pdf_n)+'.pdf')
+                    time.sleep(0.5)
+                merger.write('complete\\score.pdf')
+                merger.close()
+            elif file_type == '.png':
+                for n in range(1, sheet_i['pages']+1):
+                    im = Image.open('workspace\\%d.png'%(n))
+                    im = im.convert('RGB')
+                    im.save('workspace\\%d.jpg'%(n), quality=95)
+                images = [
+                    Image.open('workspace\\%d.jpg'%(n))
+                    for n in range(1, sheet_i['pages']+1)
+                ]
+                images[0].save('complete\\score.pdf', 'PDF' ,resolution=100.0, save_all=True, append_images=images[1:])
         except Exception as e:
             if cmn.TESTING['exception']: print(e)
             return self.exception_handler('combine_error')
@@ -282,15 +301,7 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     
     def ending_combine(self, sheet_i):
         self.sgnl_updt_log.emit('clearing unnecessary files\n', 'ing')
-        for file_n in range(1, sheet_i['pages']+1):
-            try:
-                cmnd = 'del ' + cmn.path_cr + 'workspace\\' + str(file_n)+'.svg'
-                rmsvg = subprocess.Popen(cmnd, shell=True)
-                rmsvg.communicate()
-                cmnd = 'del ' + cmn.path_cr + 'workspace\\' + str(file_n)+'.pdf'
-                rmpdf = subprocess.Popen(cmnd, shell=True)
-                rmpdf.communicate()
-            except: pass
+        self.remove_workspace()
         try:
             cmnd = 'ren "complete\\score.pdf" "complete\\'+str(sheet_i['name']).replace('|', '／').replace('/', '／').replace('?', '_').replace('\"', '\'').replace('*', '~').replace(':', '-').replace('<', '_').replace('>', '_')+'.pdf"'
             rnpdf = subprocess.Popen(cmnd, shell=True)
@@ -334,12 +345,20 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
     # other
     
     def new_folder(self):
-        cmnd = 'mkdir workspace'
-        new_f = subprocess.Popen(cmnd, shell=True)
-        new_f.communicate()
         cmnd = 'mkdir complete'
         new_f2 = subprocess.Popen(cmnd, shell=True)
         new_f2.communicate()
+    
+    def new_workspace(self):
+        cmnd = 'mkdir workspace'
+        new_ws = subprocess.Popen(cmnd, shell=True)
+        new_ws.communicate()
+    
+    def remove_workspace(self):
+        cmnd = 'rm /q workspace'
+        del_ws = subprocess.Popen(cmnd, shell=True)
+        del_ws.communicate()
+        
     
     def exit_comfirm(self):
         pass

@@ -93,12 +93,13 @@ class MuseHunter(UIController):
                 print(self.url_queue)
     
     def del_url(self, id):
-        exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
-        exec('self.frm_url_%s.deleteLater()'%(id))
-        self.scrwc_urls.repaint()
-        del self.url_queue[id]
-        self.check_download_available()
-        self.sgnl_updt_log.emit('URL deleted\n', 'suc')
+        if not self.downloader_running:
+            exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
+            exec('self.frm_url_%s.deleteLater()'%(id))
+            self.scrwc_urls.repaint()
+            del self.url_queue[id]
+            self.check_download_available()
+            self.sgnl_updt_log.emit('URL deleted\n', 'suc')
     
     def auto_add_url(self):
         if self.user.setting_pref['auto_add_url']:
@@ -152,25 +153,27 @@ class MuseHunter(UIController):
         self.done_urls_c += 1
     
     def change_url_status(self, status, id, title=''):
-        self.url_queue[id]['status'] = status
-        if status == 'ing':
-            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 0, 180), stop: 1.0 rgba(220, 220, 0, 130));
+        try:
+            self.url_queue[id]['status'] = status
+            if status == 'ing':
+                style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 0, 180), stop: 1.0 rgba(220, 220, 0, 130));
 border-radius: 4px;'''
-        elif status == 'up':
-            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(85, 255, 0, 180), stop: 1.0 rgba(70, 220, 0, 130));
+            elif status == 'up':
+                style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(85, 255, 0, 180), stop: 1.0 rgba(70, 220, 0, 130));
 border-radius: 4px;'''
-        elif status == 'fail':
-            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 85, 0, 180), stop: 1.0 rgba(220, 80, 0, 130));
+            elif status == 'fail':
+                style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 85, 0, 180), stop: 1.0 rgba(220, 80, 0, 130));
 border-radius: 4px;'''
-        elif status == 'dl_ing':
-            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(0, 255, 255, 180), stop: 1.0 rgba(0, 80, 80, 130));
+            elif status == 'dl_ing':
+                style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(0, 255, 255, 180), stop: 1.0 rgba(0, 80, 80, 130));
 border-radius: 4px;'''
-        elif status == 'dl_fail':
-            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(100, 100, 100, 180), stop: 1.0 rgba(80, 80, 80, 130));
+            elif status == 'dl_fail':
+                style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(100, 100, 100, 180), stop: 1.0 rgba(80, 80, 80, 130));
 border-radius: 4px;'''
-        t_code = f'''self.frm_url_{id}.setStyleSheet(style_s)
+            t_code = f'''self.frm_url_{id}.setStyleSheet(style_s)
 if title != '': self.lbt_url_{id}.setText(title)'''
-        exec(t_code)
+            exec(t_code)
+        except: pass
     
     def check_download_available(self):
         # check status

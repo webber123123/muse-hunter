@@ -92,8 +92,8 @@ class MuseHunter(UIController):
                 print(new_url)
                 print(self.url_queue)
     
-    def del_url(self, id):
-        if not self.downloader_running:
+    def del_url(self, id, enforce=False):
+        if not self.downloader_running or enforce:
             exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
             exec('self.frm_url_%s.deleteLater()'%(id))
             self.scrwc_urls.repaint()
@@ -271,7 +271,7 @@ if title != '': self.lbt_url_{id}.setText(title)'''
                     if rtn[0]:
                         if self.combine_pages_to_pdf(t_queue[sheet], rtn[1]):
                             self.ending_combine(t_queue[sheet])
-                            self.del_url(sheet)
+                            self.del_url(sheet, True)
                             self.add_complete_url(t_queue[sheet]['name'])
                             self.sgnl_updt_log.emit('sheet get !\n', 'suc')
                             continue

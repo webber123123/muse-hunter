@@ -27,6 +27,7 @@ class MuseHunter(UIController):
     sgnl_updt_log = QtCore.pyqtSignal(str, str)
     sgnl_change_url_sts = QtCore.pyqtSignal(str, int, str)
     sgnl_change_btn_sts = QtCore.pyqtSignal(QPushButton, bool)
+    sgnl_btn_start_switch = QtCore.pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -64,6 +65,7 @@ class MuseHunter(UIController):
         self.sgnl_updt_log.connect(self.update_log)
         self.sgnl_change_url_sts.connect(self.change_url_status)
         self.sgnl_change_btn_sts.connect(self.button_enable_switch)
+        self.sgnl_btn_start_switch.connect(self.btn_start_switch)
     
     def thd_initial_process(self):
         thd_init_prc = threading.Thread(target=self.initial_process)
@@ -76,6 +78,7 @@ class MuseHunter(UIController):
     # download tab
     
     def add_url(self, new_url=''):
+        if self.downloader_running: return
         if new_url == False: new_url = self.ln_add_url.text()
         if new_url != '':
             self.update_log('adding', 'ing')
@@ -87,6 +90,7 @@ class MuseHunter(UIController):
                     new_wg[2].clicked.connect(lambda: self.del_url(i))
                     self.ln_add_url.clear()
                     self.thd_ckeck_url(i)
+                    self.auto_url_old = new_url
                     break
             if cmn.TESTING['print']:
                 print(new_url)
@@ -94,15 +98,17 @@ class MuseHunter(UIController):
     
     def del_url(self, id, enforce=False):
         if not self.downloader_running or enforce:
-            exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
-            exec('self.frm_url_%s.deleteLater()'%(id))
-            self.scrwc_urls.repaint()
-            del self.url_queue[id]
-            self.check_download_available()
-            self.sgnl_updt_log.emit('URL deleted\n', 'suc')
+            try:
+                exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
+                exec('self.frm_url_%s.deleteLater()'%(id))
+                self.scrwc_urls.repaint()
+                del self.url_queue[id]
+                self.check_download_available()
+                self.sgnl_updt_log.emit('URL deleted\n', 'suc')
+            except: pass
     
     def auto_add_url(self):
-        if self.user.setting_pref['auto_add_url']:
+        if self.user.setting_pref['auto_add_url'] and not self.downloader_running:
             clipboard_content = pyperclip.paste()
             if clipboard_content != self.auto_url_old and 'https://musescore.com/' in clipboard_content:
                 self.auto_url_old = clipboard_content
@@ -148,7 +154,7 @@ class MuseHunter(UIController):
         self.check_download_available()
     
     def add_complete_url(self, name):
-        if len(name) > 20: name = name[:20]
+        if len(name) > 22: name = name[:20] + ' ...'
         self.txtB_complete.append(str(self.done_urls_c)+'. '+name+'\n---------------------')
         self.done_urls_c += 1
     
@@ -246,19 +252,21 @@ if title != '': self.lbt_url_{id}.setText(title)'''
         thd_rundl.join
     
     def push_start_button(self):
-        if self.downloader_running:
-            self.stop_downloader()
+        if self.downloader_running: self.stop_downloader()
+        else: self.thd_run_downloader()
+    
+    def btn_start_switch(self):
+        if not self.downloader_running:
             self.btn_start_download.setText('start')
             self.set_start_btn_style('rgb(0, 255, 0)', 'rgb(0, 220, 0)')
         else:
-            self.thd_run_downloader()
             self.btn_start_download.setText('stop')
             self.set_start_btn_style('rgb(255, 0, 0)', 'rgb(220, 0, 0)')
     
     def run_downloader(self):
         if not self.check_download_available(): return
-        self.sgnl_change_btn_sts.emit(self.btn_start_download, True)
         self.downloader_running = True
+        self.sgnl_btn_start_switch.emit()
         self.sgnl_updt_log.emit('start download\n', 'sys')
         t_queue = self.url_queue.copy()
         for sheet in t_queue:
@@ -280,15 +288,18 @@ if title != '': self.lbt_url_{id}.setText(title)'''
             self.sgnl_change_url_sts.emit('dl_fail', sheet, '')
         try: self.sgnl_change_url_sts.emit('up', self.curr_sheet_id, '')
         except: pass
-        self.check_download_available()
         self.remove_workspace()
         self.sgnl_updt_log.emit('downloader stopped\n', 'sys')
         self.sgnl_change_btn_sts.emit(self.btn_start_download, True)
+        self.downloader_running = False
+        self.sgnl_btn_start_switch.emit()
+        self.check_download_available()
     
     def stop_downloader(self):
-        self.sgnl_change_btn_sts.emit(self.btn_start_download, False)
-        self.sgnl_updt_log.emit('stopping downloader\n', 'ing')
         self.downloader_running = False
+        self.sgnl_btn_start_switch.emit()
+        self.sgnl_change_btn_sts.emit(self.btn_start_download, False)
+        self.sgnl_updt_log.emit('stopping downloader\n', 'ct')
         self.sgnl_change_url_sts.emit('up', self.curr_sheet_id, '')
         try: hunter.quit()
         except: pass
@@ -407,10 +418,6 @@ if title != '': self.lbt_url_{id}.setText(title)'''
         self.txtB_log.append(htmls)
         self.txtB_log.moveCursor(QtGui.QTextCursor.End)
     
-    def add_to_complete_area(self):
-        
-        pass
-    
     def fail_url_handle(self, sheet_id):
         self.sgnl_change_url_sts.emit('dl_fail', sheet_id, '')
         self.sgnl_updt_log.emit('the url has been passed', 'sys')
@@ -436,10 +443,13 @@ if title != '': self.lbt_url_{id}.setText(title)'''
             del_ws = subprocess.Popen(cmnd, shell=True)
             del_ws.communicate()
         except: pass
-    
+        
     def closeEvent(self, event):
         if QMessageBox.question(None, 'exit comfirm', 'exit ?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.No: 
             event.ignore()
             return
+        if self.downloader_running:
+            try: hunter.quit()
+            except: pass
         cmn.app_alive = False
         event.accept()

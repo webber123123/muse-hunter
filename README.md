@@ -1,3 +1,2 @@
-# muse-hunter
-A downloader for music sheet  
-but not done yet
+# muse-hunter (ver 1.0.0)
+A downloader for music sheet

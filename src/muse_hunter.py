@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import QMessageBox
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -11,16 +11,13 @@ from PyPDF2 import PdfFileMerger
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
 
-import requests, threading, pyperclip, subprocess
-import time
-
+import requests, threading, pyperclip, subprocess, time
 from bs4 import BeautifulSoup
 
 from ui_controller import UIController
 from tools import Tools
 import common as cmn
-
-
+from common import User
 
 
 
@@ -28,17 +25,21 @@ class MuseHunter(UIController):
     sgnl_change_wd_status = QtCore.pyqtSignal(str)
     sgnl_ck_webdriver = QtCore.pyqtSignal()
     sgnl_updt_log = QtCore.pyqtSignal(str, str)
+    sgnl_change_url_sts = QtCore.pyqtSignal(str, int, str)
     
     def __init__(self):
         super().__init__()
+        self.new_folder()
         # init val
         self.tools = Tools()
+        self.user = User()
         self.MAX_QUEUE = 49
-        self.url_queue = {}     # id : { 'url':'......', 'status':'down/ing/up/fail', 'name':'......', 'page':'...' }
+        self.auto_url_old = ''
+        self.url_queue = {}     # id : { 'url':'......', 'status':'down/ing/up/fail/dl_fail', 'name':'......', 'page':'...' }
         self.done_urls_c = 1
         self.timer_freq = {'auto_url':1000}
         # init action
-        self.new_folder()
+        self.set_rdBtn_status()
         self.bind_event()
         self.bind_signal()
         self.thd_initial_process()
@@ -49,6 +50,8 @@ class MuseHunter(UIController):
         self.btn_download_t0.clicked.connect(self.update_tool_0)
         self.ln_add_url.returnPressed.connect(self.add_url)
         self.btn_start_download.clicked.connect(self.thd_run_downloader)
+        self.rdBtn_ad_t0.clicked.connect(self.btn_auto_dl_t0)
+        self.rdBtn_auto_add_url.clicked.connect(self.btn_auto_add_url)
         # timer
         self.auto_url_listener.timeout.connect(self.auto_add_url)
     
@@ -56,6 +59,7 @@ class MuseHunter(UIController):
         self.sgnl_change_wd_status.connect(self.change_webdriver_status)
         self.sgnl_ck_webdriver.connect(self.check_webdriver_available)
         self.sgnl_updt_log.connect(self.update_log)
+        self.sgnl_change_url_sts.connect(self.change_url_status)
     
     def thd_initial_process(self):
         thd_init_prc = threading.Thread(target=self.initial_process)
@@ -88,18 +92,17 @@ class MuseHunter(UIController):
         exec('self.vlyo_urls.removeWidget(self.frm_url_%s)'%(id))
         exec('self.frm_url_%s.deleteLater()'%(id))
         self.scrwc_urls.repaint()
-        print('sadasdad : ')
-        print(self.url_queue)
         del self.url_queue[id]
         self.check_download_available()
         self.sgnl_updt_log.emit('URL deleted\n', 'suc')
     
     def auto_add_url(self):
-        clipboard_content = pyperclip.paste()
-        if 'https://musescore.com/' in clipboard_content and False:
-            self.add_url(clipboard_content)
-            pyperclip.copy('')
-        self.auto_url_listener.start(self.timer_freq['auto_url'])
+        if self.user.setting_pref['auto_add_url']:
+            clipboard_content = pyperclip.paste()
+            if clipboard_content != self.auto_url_old and 'https://musescore.com/' in clipboard_content:
+                self.auto_url_old = clipboard_content
+                self.add_url(clipboard_content)
+        if cmn.app_alive: self.auto_url_listener.start(self.timer_freq['auto_url'])
     
     def thd_ckeck_url(self, id):
         ck_url = threading.Thread(target=self.ckeck_url, args=(id, ))
@@ -109,7 +112,7 @@ class MuseHunter(UIController):
     def ckeck_url(self, id):
         try:
             if self.url_queue[id]['status'] == 'down':
-                self.change_url_status('ing', id)
+                self.sgnl_change_url_sts.emit('ing', id, '')
                 time.sleep(1)
                 try:
                     res = requests.get(self.url_queue[id]['url'])
@@ -128,11 +131,11 @@ class MuseHunter(UIController):
                     if cmn.TESTING['print']: print(_index, str(soup)[_index+len(_sub_str_2):_index+len(_sub_str_2)+3])
                     if not page_count.isnumeric(): raise Exception
                     self.url_queue[id]['name'], self.url_queue[id]['pages'] = title, int(page_count)
-                    self.change_url_status('up', id, title)
+                    self.sgnl_change_url_sts.emit('up', id, title)
                     self.sgnl_updt_log.emit('URL added\n', 'suc')
                     if cmn.TESTING['print']: print(self.url_queue[id])
                 except Exception as e:
-                    self.change_url_status('fail', id, 'Error : Sheet not found !')
+                    self.sgnl_change_url_sts.emit('fail', id, 'Error : Sheet not found !')
                     self.sgnl_updt_log.emit('failed to add URL\n', 'ct')
                     if cmn.TESTING['exception']: print(e)
                     
@@ -144,7 +147,7 @@ class MuseHunter(UIController):
         self.txtB_complete.append(str(self.done_urls_c)+'. '+name+'\n---------------------')
         self.done_urls_c += 1
     
-    def change_url_status(self, status, id, title='none'):
+    def change_url_status(self, status, id, title=''):
         self.url_queue[id]['status'] = status
         if status == 'ing':
             style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 0, 180), stop: 1.0 rgba(220, 220, 0, 130));
@@ -155,8 +158,14 @@ border-radius: 4px;'''
         elif status == 'fail':
             style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 85, 0, 180), stop: 1.0 rgba(220, 80, 0, 130));
 border-radius: 4px;'''
+        elif status == 'dl_ing':
+            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(0, 255, 255, 180), stop: 1.0 rgba(0, 80, 80, 130));
+border-radius: 4px;'''
+        elif status == 'dl_fail':
+            style_s = '''background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(100, 100, 100, 180), stop: 1.0 rgba(80, 80, 80, 130));
+border-radius: 4px;'''
         t_code = f'''self.frm_url_{id}.setStyleSheet(style_s)
-if title != 'none': self.lbt_url_{id}.setText(title)'''
+if title != '': self.lbt_url_{id}.setText(title)'''
         exec(t_code)
     
     def check_download_available(self):
@@ -181,8 +190,11 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         self.change_webdriver_status('checking')
         rst = self.tools.check_webdriver()
         if rst == 'up': self.tools.tools_status['webdriver'] = True
-        elif rst == 'need dl' or rst == 'need updt': self.btn_download_t0.setEnabled(True)
+        elif rst == 'need dl' or rst == 'need updt':
+            self.btn_download_t0.setEnabled(True)
         self.change_webdriver_status(rst)
+        if self.user.setting_pref['wd_auto_dl'] and rst == 'need dl' or rst == 'need updt':
+            self.update_tool_0()
     
     def update_tool_0(self):
         self.tools.thd_updtWbd(self.sgnl_change_wd_status.emit, 'downloading', self.sgnl_ck_webdriver.emit)
@@ -205,6 +217,20 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
             self.lbt_status_t0.setText('Downloading ...')
             self.set_wg_style(self.lbt_status_t0, 'color: rgb(255, 255, 0);')
     
+    def set_rdBtn_status(self):
+        self.rdBtn_ad_t0.setChecked(self.user.setting_pref['wd_auto_dl'])
+        self.rdBtn_auto_add_url.setChecked(self.user.setting_pref['auto_add_url'])
+    
+    def btn_auto_dl_t0(self):
+        button = self.sender()
+        if button.isChecked(): self.user.change_pref('wd_auto_dl', True)
+        else: self.user.change_pref('wd_auto_dl', False)
+    
+    def btn_auto_add_url(self):
+        button = self.sender()
+        if button.isChecked(): self.user.change_pref('auto_add_url', True)
+        else: self.user.change_pref('auto_add_url', False)
+    
     # downloader
     
     def thd_run_downloader(self):
@@ -217,6 +243,7 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         self.sgnl_updt_log.emit('start download\n', 'ing')
         t_queue = self.url_queue.copy()
         for sheet in t_queue:
+            self.sgnl_change_url_sts.emit('dl_ing', sheet, '')
             if 'musescore' in t_queue[sheet]['url']:
                 rtn = self.get_sheet_musescore(t_queue[sheet])
                 if rtn[0]:
@@ -225,8 +252,12 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
                         self.del_url(sheet)
                         self.add_complete_url(t_queue[sheet]['name'])
                         self.sgnl_updt_log.emit('sheet get !\n', 'suc')
+                        continue
+            self.sgnl_change_url_sts.emit('dl_fail', sheet, '')
     
     def get_sheet_musescore(self, sheet_i):
+        global hunter
+        
         self.sgnl_updt_log.emit('launching webdriver\n', 'ing')
         try: hunter = webdriver.Chrome(executable_path=self.tools.driver_path, chrome_options=cmn.chrome_options)
         except: return [self.exception_handler('no_tool_0_up')]
@@ -256,7 +287,7 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
             try:
                 sc_src = hunter.find_element('xpath', sh_xpath).get_attribute('src')
                 if page == 1:
-                    if 'score_1.svg' in sc_src: file_type = '.svg'
+                    if '.svg' in sc_src: file_type = '.svg'
                     else: file_type = '.png'
                 if cmn.TESTING['print']: print(sc_src)
                 res = requests.get(sc_src)
@@ -300,10 +331,10 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         return True
     
     def ending_combine(self, sheet_i):
-        self.sgnl_updt_log.emit('clearing unnecessary files\n', 'ing')
+        self.sgnl_updt_log.emit('clearing unnecessary files and rename sheet\n', 'ing')
         self.remove_workspace()
         try:
-            cmnd = 'ren "complete\\score.pdf" "complete\\'+str(sheet_i['name']).replace('|', '／').replace('/', '／').replace('?', '_').replace('\"', '\'').replace('*', '~').replace(':', '-').replace('<', '_').replace('>', '_')+'.pdf"'
+            cmnd = 'ren "complete\\score.pdf" "'+str(sheet_i['name']).replace('|', '／').replace('/', '／').replace('?', '_').replace('\"', '\'').replace('*', '~').replace(':', '-').replace('<', '_').replace('>', '_')+'.pdf"'
             rnpdf = subprocess.Popen(cmnd, shell=True)
             rnpdf.communicate()
         except:
@@ -342,10 +373,17 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         
         pass
     
+    def fail_url_handle(self, sheet_id):
+        self.sgnl_change_url_sts.emit('dl_fail', sheet_id, '')
+        self.sgnl_updt_log.emit('the url has been passed', 'sys')
+    
     # other
     
     def new_folder(self):
         cmnd = 'mkdir complete'
+        new_f1 = subprocess.Popen(cmnd, shell=True)
+        new_f1.communicate()
+        cmnd = 'mkdir user'
         new_f2 = subprocess.Popen(cmnd, shell=True)
         new_f2.communicate()
     
@@ -355,11 +393,17 @@ if title != 'none': self.lbt_url_{id}.setText(title)'''
         new_ws.communicate()
     
     def remove_workspace(self):
-        cmnd = 'rm /q workspace'
-        del_ws = subprocess.Popen(cmnd, shell=True)
-        del_ws.communicate()
-        
+        try:
+            cmnd = 'rd /s /q workspace'
+            del_ws = subprocess.Popen(cmnd, shell=True)
+            del_ws.communicate()
+        except: pass
     
-    def exit_comfirm(self):
-        pass
-    
+    def closeEvent(self, event):
+        if QMessageBox.question(None, 'exit comfirm', 'exit ?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.No: 
+            event.ignore()
+            return
+        try: hunter.quit()
+        except: pass
+        cmn.app_alive = False
+        event.accept()

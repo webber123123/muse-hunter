@@ -191,8 +191,13 @@ class Ui_MainWindow(object):
 "}")
         self.lbt_status_t0.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.lbt_status_t0.setObjectName("lbt_status_t0")
-        self.rdBtn_ad_t0 = QtWidgets.QRadioButton(self.frm_tool_0)
-        self.rdBtn_ad_t0.setGeometry(QtCore.QRect(260, 20, 121, 21))
+        self.gBox_rdBtn_ad_t0 = QtWidgets.QGroupBox(self.frm_tool_0)
+        self.gBox_rdBtn_ad_t0.setGeometry(QtCore.QRect(240, 10, 138, 36))
+        self.gBox_rdBtn_ad_t0.setStyleSheet("border-style: none;")
+        self.gBox_rdBtn_ad_t0.setTitle("")
+        self.gBox_rdBtn_ad_t0.setObjectName("gBox_rdBtn_ad_t0")
+        self.rdBtn_ad_t0 = QtWidgets.QRadioButton(self.gBox_rdBtn_ad_t0)
+        self.rdBtn_ad_t0.setGeometry(QtCore.QRect(20, 6, 118, 21))
         font = QtGui.QFont()
         font.setFamily("Microsoft YaHei UI")
         self.rdBtn_ad_t0.setFont(font)
@@ -267,13 +272,15 @@ class Ui_MainWindow(object):
         self.txtB_opt_i_o0.setFocusPolicy(QtCore.Qt.NoFocus)
         self.txtB_opt_i_o0.setStyleSheet("color: rgb(240, 240, 240);")
         self.txtB_opt_i_o0.setObjectName("txtB_opt_i_o0")
-        self.rdBtn_on_o1 = QtWidgets.QRadioButton(self.frm_setting)
-        self.rdBtn_on_o1.setGeometry(QtCore.QRect(420, 390, 61, 21))
-        font = QtGui.QFont()
-        font.setFamily("Microsoft YaHei UI")
-        self.rdBtn_on_o1.setFont(font)
-        self.rdBtn_on_o1.setStyleSheet("color: rgb(255, 255, 255);")
-        self.rdBtn_on_o1.setObjectName("rdBtn_on_o1")
+        self.gBox_rdBtn_aa_url = QtWidgets.QGroupBox(self.frm_setting)
+        self.gBox_rdBtn_aa_url.setGeometry(QtCore.QRect(400, 370, 81, 61))
+        self.gBox_rdBtn_aa_url.setStyleSheet("border-style: none;")
+        self.gBox_rdBtn_aa_url.setTitle("")
+        self.gBox_rdBtn_aa_url.setObjectName("gBox_rdBtn_aa_url")
+        self.rdBtn_auto_add_url = QtWidgets.QRadioButton(self.gBox_rdBtn_aa_url)
+        self.rdBtn_auto_add_url.setGeometry(QtCore.QRect(20, 20, 61, 21))
+        self.rdBtn_auto_add_url.setStyleSheet("color: rgb(255, 255, 255);")
+        self.rdBtn_auto_add_url.setObjectName("rdBtn_auto_add_url")
         self.verticalLayout.addWidget(self.frm_setting)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
         self.tabwg_main.addTab(self.tab_setting, "")
@@ -351,7 +358,7 @@ class Ui_MainWindow(object):
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'Microsoft YaHei UI\'; font-size:12pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">The app will continuously listen, and when the user copies a specific URL, the app will add the URL to the queue.</p></body></html>"))
-        self.rdBtn_on_o1.setText(_translate("MainWindow", "On"))
+        self.rdBtn_auto_add_url.setText(_translate("MainWindow", "On"))
         self.tabwg_main.setTabText(self.tabwg_main.indexOf(self.tab_setting), _translate("MainWindow", "Setting"))
         self.txtB_tutorial_t.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
@@ -359,15 +366,15 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:\'Microsoft YaHei UI\'; font-size:14pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Tutorial</span></p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">First, you need to download tool from Setting tab.</p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">First, you need to download tools from Setting tab.</p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Second, obtain the URL of the webpage where the sheet music you want to download is located.</p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Third, back to this app, enter the URL into the input box in the middle of the Download tab and click ADD.</p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">You can add many URL into the Queue, drag the URL to adjust their order. Click the X button on the right side of the URL to remove it.</p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">You can add many URL into the Queue, click the X button on the right side of the URL to remove it.</p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Finally, click START to run the program.</p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Finally, wait until all url box turns green and click START to run the program.</p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>"))
         self.txtB_app_info.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

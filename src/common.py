@@ -2,7 +2,7 @@ from selenium import webdriver
 import pathlib
 
 VERSION = '1.0.0'
-TESTING = {'print':True, 'exception':True}
+TESTING = {'print':False, 'exception':False}
 
 app_alive = True
 
@@ -15,3 +15,26 @@ chrome_options.add_argument('--headless')
 chrome_options.add_argument(f'user-agent={user_agent}')
 chrome_options.add_argument("window-size=1920,1080")
 chrome_options.add_experimental_option('prefs', prefs)
+
+class User:
+    def __init__(self):
+        self.setting_pref = {'wd_auto_dl':False, 'auto_add_url':False}
+        self.read_file()
+    
+    def write_to_file(self):
+        with open('user\\user.txt', 'w') as f:
+            f.write(str(self.setting_pref))
+    
+    def read_file(self):
+        try:
+            with open('user\\user.txt', 'r') as f:
+                content = f.read()
+            self.setting_pref = eval(content)
+            if TESTING['print']: print(self.setting_pref)
+        except Exception as e:
+            if TESTING['exception']: print(e)
+            self.write_to_file()
+    
+    def change_pref(self, key, val):
+        self.setting_pref[key] = val
+        self.write_to_file()

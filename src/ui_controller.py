@@ -9,6 +9,7 @@ class UIController(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle('MuseHunter')
         # init
         self.auto_url_listener = QtCore.QTimer()
         # ui
@@ -67,6 +68,19 @@ t_widget.append(self.btn_rm_u{i})'''
             widget.setStyleSheet(rtnStr)
         except Exception as e: 
             if cmn.TESTING['exception']: print(e)
+    
+    def set_start_btn_style(self, color, color2):
+        self.btn_start_download.setStyleSheet('''QPushButton {
+	color: %s;
+	background-color: rgb(88, 88, 88);
+}
+QPushButton:hover {
+	color: %s;
+}
+
+QPushButton:disabled {
+	color: rgb(160, 160, 160);
+}'''%(color, color2))
     
     def button_enable_switch(self, btn, sts):
         btn.setEnabled(sts)

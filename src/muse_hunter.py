@@ -1,5 +1,5 @@
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QPushButton
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -26,6 +26,7 @@ class MuseHunter(UIController):
     sgnl_ck_webdriver = QtCore.pyqtSignal()
     sgnl_updt_log = QtCore.pyqtSignal(str, str)
     sgnl_change_url_sts = QtCore.pyqtSignal(str, int, str)
+    sgnl_change_btn_sts = QtCore.pyqtSignal(QPushButton, bool)
     
     def __init__(self):
         super().__init__()
@@ -38,6 +39,8 @@ class MuseHunter(UIController):
         self.url_queue = {}     # id : { 'url':'......', 'status':'down/ing/up/fail/dl_fail', 'name':'......', 'page':'...' }
         self.done_urls_c = 1
         self.timer_freq = {'auto_url':1000}
+        self.curr_sheet_id = 0
+        self.downloader_running = False
         # init action
         self.set_rdBtn_status()
         self.bind_event()
@@ -49,7 +52,7 @@ class MuseHunter(UIController):
         self.btn_add_url.clicked.connect(self.add_url)
         self.btn_download_t0.clicked.connect(self.update_tool_0)
         self.ln_add_url.returnPressed.connect(self.add_url)
-        self.btn_start_download.clicked.connect(self.thd_run_downloader)
+        self.btn_start_download.clicked.connect(self.push_start_button)
         self.rdBtn_ad_t0.clicked.connect(self.btn_auto_dl_t0)
         self.rdBtn_auto_add_url.clicked.connect(self.btn_auto_add_url)
         # timer
@@ -60,6 +63,7 @@ class MuseHunter(UIController):
         self.sgnl_ck_webdriver.connect(self.check_webdriver_available)
         self.sgnl_updt_log.connect(self.update_log)
         self.sgnl_change_url_sts.connect(self.change_url_status)
+        self.sgnl_change_btn_sts.connect(self.button_enable_switch)
     
     def thd_initial_process(self):
         thd_init_prc = threading.Thread(target=self.initial_process)
@@ -138,8 +142,8 @@ class MuseHunter(UIController):
                     self.sgnl_change_url_sts.emit('fail', id, 'Error : Sheet not found !')
                     self.sgnl_updt_log.emit('failed to add URL\n', 'ct')
                     if cmn.TESTING['exception']: print(e)
-                    
         except: pass
+        time.sleep(0.1)
         self.check_download_available()
     
     def add_complete_url(self, name):
@@ -172,15 +176,15 @@ if title != '': self.lbt_url_{id}.setText(title)'''
         # check status
         t_dict = self.url_queue.copy()
         if t_dict == {}:
-            self.btn_start_download.setEnabled(False)
+            self.sgnl_change_btn_sts.emit(self.btn_start_download, False)
             return False
         for sheet in t_dict:
-            if t_dict[sheet]['status'] != 'up':
-                self.btn_start_download.setEnabled(False)
+            if t_dict[sheet]['status'] != 'up' and t_dict[sheet]['status'] != 'dl_fail':
+                self.sgnl_change_btn_sts.emit(self.btn_start_download, False)
                 return False
-        self.btn_start_download.setEnabled(True)
+        self.sgnl_change_btn_sts.emit(self.btn_start_download, True)
         return True
-    
+        
     # tool tab
     
     def check_webdriver_available(self):
@@ -238,22 +242,53 @@ if title != '': self.lbt_url_{id}.setText(title)'''
         thd_rundl.start()
         thd_rundl.join
     
+    def push_start_button(self):
+        if self.downloader_running:
+            self.stop_downloader()
+            self.btn_start_download.setText('start')
+            self.set_start_btn_style('rgb(0, 255, 0)', 'rgb(0, 220, 0)')
+        else:
+            self.thd_run_downloader()
+            self.btn_start_download.setText('stop')
+            self.set_start_btn_style('rgb(255, 0, 0)', 'rgb(220, 0, 0)')
+    
     def run_downloader(self):
         if not self.check_download_available(): return
-        self.sgnl_updt_log.emit('start download\n', 'ing')
+        self.sgnl_change_btn_sts.emit(self.btn_start_download, True)
+        self.downloader_running = True
+        self.sgnl_updt_log.emit('start download\n', 'sys')
         t_queue = self.url_queue.copy()
         for sheet in t_queue:
+            self.curr_sheet_id = sheet
             self.sgnl_change_url_sts.emit('dl_ing', sheet, '')
+            if self.downloader_running == False: break
             if 'musescore' in t_queue[sheet]['url']:
-                rtn = self.get_sheet_musescore(t_queue[sheet])
-                if rtn[0]:
-                    if self.combine_pages_to_pdf(t_queue[sheet], rtn[1]):
-                        self.ending_combine(t_queue[sheet])
-                        self.del_url(sheet)
-                        self.add_complete_url(t_queue[sheet]['name'])
-                        self.sgnl_updt_log.emit('sheet get !\n', 'suc')
-                        continue
+                try:
+                    rtn = self.get_sheet_musescore(t_queue[sheet])
+                    if rtn[0]:
+                        if self.combine_pages_to_pdf(t_queue[sheet], rtn[1]):
+                            self.ending_combine(t_queue[sheet])
+                            self.del_url(sheet)
+                            self.add_complete_url(t_queue[sheet]['name'])
+                            self.sgnl_updt_log.emit('sheet get !\n', 'suc')
+                            continue
+                except: pass
+            if self.downloader_running == False: break
             self.sgnl_change_url_sts.emit('dl_fail', sheet, '')
+        try: self.sgnl_change_url_sts.emit('up', self.curr_sheet_id, '')
+        except: pass
+        self.check_download_available()
+        self.remove_workspace()
+        self.sgnl_updt_log.emit('downloader stopped\n', 'sys')
+        self.sgnl_change_btn_sts.emit(self.btn_start_download, True)
+    
+    def stop_downloader(self):
+        self.sgnl_change_btn_sts.emit(self.btn_start_download, False)
+        self.sgnl_updt_log.emit('stopping downloader\n', 'ing')
+        self.downloader_running = False
+        self.sgnl_change_url_sts.emit('up', self.curr_sheet_id, '')
+        try: hunter.quit()
+        except: pass
     
     def get_sheet_musescore(self, sheet_i):
         global hunter
@@ -403,7 +438,5 @@ if title != '': self.lbt_url_{id}.setText(title)'''
         if QMessageBox.question(None, 'exit comfirm', 'exit ?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.No: 
             event.ignore()
             return
-        try: hunter.quit()
-        except: pass
         cmn.app_alive = False
         event.accept()
